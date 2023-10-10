@@ -87,6 +87,7 @@ module lab4_1 (
     one_pulse(clk, start_pb, start_pb);
 
     reg clk_001;
+    clock_divider2(clk, clk_001);
 
     parameter INITIAL = 2'b00;
     parameter PREPARE = 2'b01;
@@ -103,7 +104,7 @@ module lab4_1 (
     parameter DOWN = 1'b0;
 
     // state reset
-    always@(posedge clk, negedge rst) begin
+    always@(posedge clk_001, negedge rst) begin
         if(!rst) begin
             state <= INITIAL;
         end else begin
@@ -111,7 +112,7 @@ module lab4_1 (
         end
     end
     // digits combinational
-    always@(posedge clk, negedge rst) begin
+    always@(posedge clk_001, negedge rst) begin
         case(state)
         INITIAL: begin
             if(direction==UP) begin
