@@ -53,6 +53,23 @@ module clock_divider #(
     assign clk_div = num[n-1];
 endmodule
 
+module clock_divider2(
+    input wire  clk,
+    output wire clk_div  
+);
+
+    reg [19:0] num;
+    wire [19:0] next_num;
+
+    always @(posedge clk) begin
+        num <= next_num;
+    end
+
+    assign next_num = num + 1'd1;
+    assign clk_div = (next_num==20'd1000000)? 1:0;
+    assign next_num = (next_num==20'd1000000)? 0:next_num;
+endmodule
+
 module lab4_1 ( 
     input wire clk,
     input wire rst,
