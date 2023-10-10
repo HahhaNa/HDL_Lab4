@@ -53,7 +53,7 @@ module clock_divider #(
     assign clk_div = num[n-1];
 endmodule
 
-module clock_divider2(
+module clock_divider001(
     input wire  clk,
     output wire clk_div  
 );
@@ -65,9 +65,24 @@ module clock_divider2(
         num <= next_num;
     end
 
-    assign next_num = num + 1'd1;
-    assign clk_div = (next_num==20'd1000000)? 1:0;
-    assign next_num = (next_num==20'd1000000)? 0:next_num;
+    assign next_num = (next_num==20'd500000)? 0:num + 1'd1;
+    assign clk_div = (next_num==20'd500000)? 1:0;
+endmodule
+
+module clock_divider1(
+    input wire  clk,
+    output wire clk_div  
+);
+
+    reg [19:0] num;
+    wire [19:0] next_num;
+
+    always @(posedge clk) begin
+        num <= next_num;
+    end
+
+    assign next_num = (next_num==20'd50)? 0:num + 1'd1;
+    assign clk_div = (next_num==20'd50)? 1:0;
 endmodule
 
 module lab4_1 ( 
@@ -81,13 +96,14 @@ module lab4_1 (
     output reg [9:0] led
 ); 
     wire stop_pb, start_pb;
+    wire stop_out, start_out;
     debounce(clk, stop, stop_pb);
-    one_pulse(clk, stop_pb, stop_pb);
+    one_pulse(clk, stop_pb, stop_out);
     debounce(clk, start, start_pb);
-    one_pulse(clk, start_pb, start_pb);
+    one_pulse(clk, start_pb, start_out);
 
-    reg clk_001;
-    clock_divider2(clk, clk_001);
+    wire clk_001;
+    clock_divider001(clk, clk_001);
 
     parameter INITIAL = 2'b00;
     parameter PREPARE = 2'b01;
@@ -105,14 +121,14 @@ module lab4_1 (
 
     // state reset
     always@(posedge clk_001, negedge rst) begin
-        if(!rst) begin
+        if(rst==1'b0) begin
             state <= INITIAL;
         end else begin
             state <= next_state;
         end
     end
-    // digits combinational
-    always@(posedge clk_001, negedge rst) begin
+    // digits, tens, hundreds, first control
+    always@(posedge clk_001) begin
         case(state)
         INITIAL: begin
             if(direction==UP) begin
@@ -129,9 +145,6 @@ module lab4_1 (
         end 
         PREPARE: begin
             first <= 4'd10;
-            hundreds <= hundreds;
-            tens <= tens;
-            digits <= digits;
         end
         COUNTING: begin
             if(direction==UP) begin
@@ -161,6 +174,46 @@ module lab4_1 (
             tens <= result[1];
             hundreds <= result[2];
             first <= result[3];
+        end
+        endcase
+    end
+
+    wire clk_1;
+    reg [1:0] cnt_clk_1;
+    reg led_finish;
+    clock_divider1(clk_001, clk_1);
+    // led output
+    always@(posedge clk_001) begin
+        case(state)
+        INITIAL: begin
+            led <= 10'b111_111_1111;
+        end 
+        PREPARE: begin
+            led <= 10'd0;
+        end
+        COUNTING: begin
+            case(hundreds)
+                4'd0: led <= 10'b000_000_0001;
+                4'd1: led <= 10'b000_000_0010;
+                4'd2: led <= 10'b000_000_0100;
+                4'd3: led <= 10'b000_000_1000;
+                4'd4: led <= 10'b000_001_0000;
+                4'd5: led <= 10'b000_010_0000;
+                4'd6: led <= 10'b000_100_0000;
+                4'd7: led <= 10'b001_000_0000;
+                4'd8: led <= 10'b010_000_0000;
+                4'd9: led <= 10'b100_000_0000;
+                default: led <= 10'b000_000_0000;
+            endcase
+            cnt_clk_1 = 2'd0;
+        end
+        RESULT: begin
+            if(clk_1==1'b1 && cnt_clk_1<5) begin
+                led <= (cnt_clk_1%2'd2 != 0)? 10'b111_1111:10'd0;
+                cnt_clk_1 = cnt_clk_1+2'd1;
+            end else begin
+                led <= 10'b111_1111;
+            end
         end
         endcase
     end
@@ -207,7 +260,7 @@ module lab4_1 (
     always@(*) begin
         case(state) 
             INITIAL: begin
-                if(start_pb) next_state = PREPARE;
+                if(start_out) next_state = PREPARE;
                 else next_state = INITIAL;
             end
             PREPARE: begin
@@ -215,7 +268,7 @@ module lab4_1 (
                 else next_state = PREPARE;
             end
             COUNTING: begin
-                if(stop_pb || (direction==UP && counts==10'd999) || (direction==DOWN && counts==10'd0)) begin
+                if(stop_out || finish==1'b1) begin
                     next_state = RESULT;
                     result[3] = first;
                     result[2] = hundreds;
@@ -225,7 +278,7 @@ module lab4_1 (
                 else next_state = COUNTING;
             end
             RESULT: begin
-                if(start_pb) next_state = INITIAL;
+                if(start_out) next_state = INITIAL;
                 else next_state = RESULT;
             end
         endcase
