@@ -11,7 +11,6 @@ module debounce (
 	end
 
 	assign pb_debounced = ((shift_reg == 4'b1111) ? 1'b1 : 1'b0);
-
 endmodule
 
 module one_pulse (
@@ -53,7 +52,7 @@ module clock_divider #(
     assign clk_div = num[n-1];
 endmodule
 
-module clock_divider00001(
+module clock_divider000001(
     input clk, 
     input rst_n, 
     output reg clk_div
@@ -70,11 +69,11 @@ module clock_divider00001(
     always@(*) begin
         if(out == 13'd5000 && rst_n==1'b0) begin
             next_out = 0;
-            clk_div = 1;
+            clk_div = (clk_div==1'b0)? 1'b1:1'b0;
         end
         else begin
-            next_out = out + 1'b1;
-            clk_div = 0;
+            next_out = out + 13'd1;
+            clk_div = clk_div;
         end
     end
 endmodule
@@ -96,11 +95,11 @@ module clock_divider001(
     always@(*) begin
         if(out == 20'd500000 && rst_n==1'b0) begin
             next_out = 0;
-            clk_div = 1;
+            clk_div = (clk_div==1'b0)? 1'b1:1'b0;
         end
         else begin
-            next_out = out + 1'b1;
-            clk_div = 0;
+            next_out = out + 20'd1;
+            clk_div = clk_div;
         end
     end
 endmodule
@@ -123,11 +122,11 @@ module clock_divider1(
     always@(*) begin
         if(out == 26'd50000000 && rst_n==1'b0) begin
             next_out = 0;
-            clk_div = 1;
+            clk_div = (clk_div==1'b0)? 1'b1:1'b0;
         end
         else begin
-            next_out = out + 1'b1;
-            clk_div = 0;
+            next_out = out + 26'd1;
+            clk_div = clk_div;
         end
     end
 endmodule
@@ -142,19 +141,21 @@ module lab4_1 (
     output reg [6:0] DISPLAY,
     output reg [9:0] led
 ); 
-    wire clk_001, clk_1, clk_00001;
-    clock_divider00001 clk1(.clk(clk), .clk_div(clk_00001), .rst_n(rst));
+    // clk
+    wire clk_001, clk_1, clk_000001;
+    clock_divider000001 clk1(.clk(clk), .clk_div(clk_000001), .rst_n(rst));
     clock_divider001 clk2(.clk(clk), .clk_div(clk_001), .rst_n(rst));
     clock_divider1 clk3(.clk(clk), .clk_div(clk_1), .rst_n(rst));
 
+    // button signal
     wire stop_pb, start_pb, direction_pb;
     wire stop_out, start_out, direction_out;
-    debounce d1(.clk(clk_00001), .pb(stop), .pb_debounced(stop_pb));
-    one_pulse o1(.clk(clk_00001), .pb_in(stop_pb), .pb_out(stop_out));
-    debounce d2(.clk(clk_00001), .pb(start), .pb_debounced(start_pb));
-    one_pulse o2(.clk(clk_00001), .pb_in(start_pb), .pb_out(start_out));
-    debounce d3(.clk(clk_00001), .pb(direction), .pb_debounced(direction_pb));
-    one_pulse o3(.clk(clk_00001), .pb_in(direction_pb), .pb_out(direction_out));
+    debounce d1(.clk(clk_000001), .pb(stop), .pb_debounced(stop_pb));
+    one_pulse o1(.clk(clk_000001), .pb_in(stop_pb), .pb_out(stop_out));
+    debounce d2(.clk(clk_000001), .pb(start), .pb_debounced(start_pb));
+    one_pulse o2(.clk(clk_000001), .pb_in(start_pb), .pb_out(start_out));
+    debounce d3(.clk(clk_000001), .pb(direction), .pb_debounced(direction_pb));
+    one_pulse o3(.clk(clk_000001), .pb_in(direction_pb), .pb_out(direction_out));
 
     parameter INITIAL = 2'b00;
     parameter PREPARE = 2'b01;
@@ -169,7 +170,7 @@ module lab4_1 (
     reg [3:0] result[3:0];
     reg dir, next_dir;
     reg finish = 0;
-    reg [1:0] cnt_clk_1, next_cnt_clk_1;
+    reg [2:0] cnt_clk_1, next_cnt_clk_1;
     reg[9:0] next_led;
     reg led_finish;
     
@@ -177,29 +178,37 @@ module lab4_1 (
     parameter DOWN = 1'b1;
 
     // sequential assign with reset
-    always@(posedge clk_001, posedge rst) begin
+    always@(posedge clk_000001, posedge rst) begin
         if(rst==1'b1) begin
             state <= INITIAL;
             dir <= 0;
-            led <= 10'b111_111_1111;
-            cnt_clk_1 <= 2'd0;
             first <= 4'd0;
+        end else begin
+            state <= next_state;
+            dir <= next_dir;
+            first <= next_first;
+        end
+    end
+    always@(posedge clk_001, posedge rst) begin
+        if(rst==1'b1) begin
+            led <= 10'b111_111_1111;
             hundreds <= 4'd0;
             tens <= 4'd0;
             digits <= 4'd0;
         end else begin
-            state <= next_state;
-            dir <= next_dir;
             led <= next_led;
-            cnt_clk_1 <= next_cnt_clk_1;
-            first <= next_first;
             hundreds <= next_hundreds;
             tens <= next_tens;
             digits <= next_digits;
         end
     end
+    always@(posedge clk_1, posedge rst) begin
+        if(rst==1'b1 || state==INITIAL || state==COUNTING)
+            cnt_clk_1 <= 3'd0;
+        else cnt_clk_1 <= next_cnt_clk_1;
+    end
 
-    // state, dir combinational
+    // FSM state, dir combinational
     always@(*) begin
         next_dir = dir;
         case(state) 
@@ -212,7 +221,7 @@ module lab4_1 (
                 end
             end
             PREPARE: begin
-                if(cnt_clk_1==3) next_state = COUNTING;
+                if(cnt_clk_1==3'd3) next_state = COUNTING;
                 else next_state = PREPARE;
             end
             COUNTING: begin
@@ -287,17 +296,22 @@ module lab4_1 (
         endcase
     end
 
-    
-    // led output combinational
+    // next_cnt_clk
+    always@(*) begin
+        if(cnt_clk_1 < 3'd5)
+            next_cnt_clk_1 = cnt_clk_1 + 3'd1;
+        else next_cnt_clk_1 = 3'd5;
+    end
+    // led output combinational (next_led)
     always@(*) begin
         case(state)
         INITIAL: begin
             next_led = 10'b111_111_1111;
-            next_cnt_clk_1 = 2'd0;
         end 
         PREPARE: begin
-            next_led = 10'd0;
-            next_cnt_clk_1 = cnt_clk_1 + 2'd1;
+            // next_led = 10'd0;
+            if(clk_1==1'b1) next_led = 10'b111_111_1111;
+            else next_led = 10'd0;
         end
         COUNTING: begin
             case(hundreds)
@@ -313,22 +327,19 @@ module lab4_1 (
                 4'd9: next_led = 10'b100_000_0000;
                 default: next_led = 10'b000_000_0000;
             endcase
-            next_cnt_clk_1 = 2'd0;
         end
         RESULT: begin
-            if(clk_1==1'b1 && cnt_clk_1<5) begin
-                next_led = (cnt_clk_1%2'd2 != 0)? 10'b111_111_1111:10'd0;
-                next_cnt_clk_1 = cnt_clk_1+2'd1;
+            if(cnt_clk_1<5) begin
+                next_led = (cnt_clk_1%3'd2 != 0)? 10'b111_111_1111:10'd0;
             end else begin
                 next_led = 10'b111_111_1111;
-                next_cnt_clk_1 = cnt_clk_1;
             end
         end
         endcase
     end
 
-     // 7-segment output
-    always@(posedge clk_00001) begin
+     // 7-segment output (value, DIGIT)
+    always@(posedge clk_000001) begin
         case(DIGIT)
             4'b0111: begin
                 if(state==COUNTING || state==RESULT)
