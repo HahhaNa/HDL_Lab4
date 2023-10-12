@@ -167,25 +167,26 @@ module lab4_1 (
     reg [3:0] next_first, next_hundreds, next_tens, next_digits;
     reg [3:0] value;
     reg [3:0] result[3:0];
+    reg dir, next_dir;
     reg finish = 0;
     reg [1:0] cnt_clk_1, next_cnt_clk_1;
     reg[9:0] next_led;
     reg led_finish;
     
+    parameter UP = 1'b0;
+    parameter DOWN = 1'b1;
 
-    parameter UP = 1'b1;
-    parameter DOWN = 1'b0;
-
-    // state reset
-    always@(posedge clk_001, negedge rst) begin
-        if(rst==1'b0) begin
+    // sequential assign with reset
+    always@(posedge clk_001, posedge rst) begin
+        if(rst==1'b1) begin
             state <= INITIAL;
+            dir <= 0;
             led <= 10'b111_111_1111;
-            cnt_clk_1 <= 0;
-            first <= 0;
-            hundreds <= 0;
-            tens <= 0;
-            digits <=0;
+            cnt_clk_1 <= 2'd0;
+            first <= 4'd0;
+            hundreds <= 4'd0;
+            tens <= 4'd0;
+            digits <= 4'd0;
         end else begin
             state <= next_state;
             dir <= next_dir;
@@ -197,16 +198,50 @@ module lab4_1 (
             digits <= next_digits;
         end
     end
-    // digits, tens, hundreds, first control
+
+    // state, dir combinational
+    always@(*) begin
+        next_dir = dir;
+        case(state) 
+            INITIAL: begin
+                if(start_out==1'b1) next_state = PREPARE;
+                else begin
+                    next_state = INITIAL;
+                    if(direction_out == 1'b1)
+                        next_dir = (dir==0)? 1:0;
+                end
+            end
+            PREPARE: begin
+                if(cnt_clk_1==3) next_state = COUNTING;
+                else next_state = PREPARE;
+            end
+            COUNTING: begin
+                if(stop_out==1'b1 || finish==1'b1) begin
+                    next_state = RESULT;
+                    result[3] = first;
+                    result[2] = hundreds;
+                    result[1] = tens;
+                    result[0] = digits;
+                end
+                else next_state = COUNTING;
+            end
+            RESULT: begin
+                if(start_out==1'b1) next_state = INITIAL;
+                else next_state = RESULT;
+            end
+        endcase
+    end
+
+    // digits, tens, hundreds, first control (next_...)
     always@(*) begin
         case(state)
         INITIAL: begin
-            if(direction==UP) begin
+            if(dir==UP) begin
                 next_first = 4'd11;
                 next_hundreds = 4'd0;
                 next_tens = 4'd0;
                 next_digits = 4'd0;
-            end else if(direction==DOWN) begin
+            end else if(dir==DOWN) begin
                 next_first = 4'd12;
                 next_hundreds = 4'd9;
                 next_tens = 4'd9;
@@ -215,10 +250,13 @@ module lab4_1 (
         end 
         PREPARE: begin
             next_first = 4'd10;
+            next_hundreds = hundreds;
+            next_tens = tens;
+            next_digits = digits;
             finish = 0;
         end
         COUNTING: begin
-            if(direction==UP) begin
+            if(dir==UP) begin
                 next_first = 4'd11;
                 if(digits==4'd9) begin
                     next_digits = 4'd0;
@@ -228,7 +266,7 @@ module lab4_1 (
                         else next_hundreds = hundreds+1;
                     end else next_tens = tens+1;
                 end else next_digits = digits+1;
-            end else if(direction==DOWN) begin
+            end else if(dir==DOWN) begin
                 next_first = 4'd12;
                 if(digits==4'd0) begin
                     next_digits = 4'd9;
@@ -250,14 +288,16 @@ module lab4_1 (
     end
 
     
-    // led output
+    // led output combinational
     always@(*) begin
         case(state)
         INITIAL: begin
             next_led = 10'b111_111_1111;
+            next_cnt_clk_1 = 2'd0;
         end 
         PREPARE: begin
             next_led = 10'd0;
+            next_cnt_clk_1 = cnt_clk_1 + 2'd1;
         end
         COUNTING: begin
             case(hundreds)
@@ -273,14 +313,15 @@ module lab4_1 (
                 4'd9: next_led = 10'b100_000_0000;
                 default: next_led = 10'b000_000_0000;
             endcase
-            cnt_clk_1 = 2'd0;
+            next_cnt_clk_1 = 2'd0;
         end
         RESULT: begin
             if(clk_1==1'b1 && cnt_clk_1<5) begin
-                next_led = (cnt_clk_1%2'd2 != 0)? 10'b111_1111:10'd0;
+                next_led = (cnt_clk_1%2'd2 != 0)? 10'b111_111_1111:10'd0;
                 next_cnt_clk_1 = cnt_clk_1+2'd1;
             end else begin
-                next_led = 10'b111_1111;
+                next_led = 10'b111_111_1111;
+                next_cnt_clk_1 = cnt_clk_1;
             end
         end
         endcase
@@ -289,9 +330,17 @@ module lab4_1 (
      // 7-segment output
     always@(posedge clk_00001) begin
         case(DIGIT)
-            4'b1110: begin
+            4'b0111: begin
                 if(state==COUNTING || state==RESULT)
                     value = digits;
+                else if(state==INITIAL)
+                    value = 4'd13;
+                else value = 4'd15; 
+                DIGIT = 4'b1110;
+            end
+            4'b1110: begin
+                if(state==COUNTING || state==RESULT)
+                    value = tens;
                 else if(state==INITIAL)
                     value = 4'd13;
                 else value = 4'd15; 
@@ -299,60 +348,22 @@ module lab4_1 (
             end
             4'b1101: begin
                 if(state==COUNTING || state==RESULT)
-                    value = tens;
+                    value = hundreds;
                 else if(state==INITIAL)
                     value = 4'd13;
                 else value = 4'd15; 
                 DIGIT = 4'b1011;
             end
             4'b1011: begin
-                if(state==COUNTING || state==RESULT)
-                    value = hundreds;
-                else if(state==INITIAL)
-                    value = 4'd13;
-                else value = 4'd15; 
-                DIGIT = 4'b0111;
-            end
-            4'b0111: begin
                 value = first;
-                DIGIT = 4'b1110;
+                DIGIT = 4'b0111;
             end
             default: begin
                 value = first;
-                DIGIT = 4'b1110;
+                DIGIT = 4'b0111;
             end
         endcase
     end
-
-    // state combinational
-    always@(*) begin
-        case(state) 
-            INITIAL: begin
-                if(start_out) next_state = PREPARE;
-                else next_state = INITIAL;
-            end
-            PREPARE: begin
-                if(clk_001==3) next_state = COUNTING;
-                else next_state = PREPARE;
-            end
-            COUNTING: begin
-                if(stop_out || finish==1'b1) begin
-                    next_state = RESULT;
-                    result[3] = first;
-                    result[2] = hundreds;
-                    result[1] = tens;
-                    result[0] = digits;
-                end
-                else next_state = COUNTING;
-            end
-            RESULT: begin
-                if(start_out) next_state = INITIAL;
-                else next_state = RESULT;
-            end
-        endcase
-    end
-
-   
 
     // value display
     always @(*) begin
