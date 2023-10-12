@@ -58,22 +58,25 @@ module clock_divider000001(
     output reg clk_div
 );
     reg [12:0] out, next_out;
+    reg next_clk_div;
     always @(posedge clk or posedge rst_n) begin
         if(rst_n==1'b1)begin
             out <= 0;
+            clk_div <= 1'b0;
         end
         else begin
             out <= next_out;
+            clk_div <= next_clk_div;
         end
     end
     always@(*) begin
         if(out == 13'd5000 && rst_n==1'b0) begin
             next_out = 0;
-            clk_div = (clk_div==1'b0)? 1'b1:1'b0;
+            next_clk_div = (clk_div==1'b0)? 1'b1:1'b0;
         end
         else begin
             next_out = out + 13'd1;
-            clk_div = clk_div;
+            next_clk_div = clk_div;
         end
     end
 endmodule
@@ -84,22 +87,25 @@ module clock_divider001(
     output reg clk_div
 );
     reg [19:0] out, next_out;
+    reg next_clk_div;
     always @(posedge clk or posedge rst_n) begin
         if(rst_n==1'b1)begin
             out <= 0;
+            clk_div <= 1'b0;
         end
         else begin
             out <= next_out;
+            clk_div <= next_clk_div;
         end
     end
     always@(*) begin
         if(out == 20'd500000 && rst_n==1'b0) begin
             next_out = 0;
-            clk_div = (clk_div==1'b0)? 1'b1:1'b0;
+            next_clk_div = (clk_div==1'b0)? 1'b1:1'b0;
         end
         else begin
             next_out = out + 20'd1;
-            clk_div = clk_div;
+            next_clk_div = clk_div;
         end
     end
 endmodule
@@ -110,23 +116,25 @@ module clock_divider1(
     output reg clk_div
 );
     reg [25:0] out, next_out;
+    reg next_clk_div;
     always @(posedge clk or posedge rst_n) begin
         if(rst_n==1'b1)begin
             out <= 0;
-            clk_div <= 0;
+            clk_div <= 1'b0;
         end
         else begin
             out <= next_out;
+            clk_div <= next_clk_div;
         end
     end
     always@(*) begin
         if(out == 26'd50000000 && rst_n==1'b0) begin
             next_out = 0;
-            clk_div = (clk_div==1'b0)? 1'b1:1'b0;
+            next_clk_div = (clk_div==1'b0)? 1'b1:1'b0;
         end
         else begin
             next_out = out + 26'd1;
-            clk_div = clk_div;
+            next_clk_div = clk_div;
         end
     end
 endmodule
