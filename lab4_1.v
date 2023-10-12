@@ -317,9 +317,7 @@ module lab4_1 (
             next_led = 10'b111_111_1111;
         end 
         PREPARE: begin
-            // next_led = 10'd0;
-            if(clk_1==1'b1) next_led = 10'b111_111_1111;
-            else next_led = 10'd0;
+            next_led = 10'd0;
         end
         COUNTING: begin
             case(hundreds)
