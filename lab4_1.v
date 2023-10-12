@@ -59,8 +59,8 @@ module clock_divider00001(
     output reg clk_div
 );
     reg [12:0] out, next_out;
-    always @(posedge clk) begin
-        if(!rst_n)begin
+    always @(posedge clk or posedge rst_n) begin
+        if(rst_n==1'b1)begin
             out <= 0;
         end
         else begin
@@ -68,7 +68,7 @@ module clock_divider00001(
         end
     end
     always@(*) begin
-        if(out == 13'd5000 && rst_n) begin
+        if(out == 13'd5000 && rst_n==1'b0) begin
             next_out = 0;
             clk_div = 1;
         end
@@ -85,8 +85,8 @@ module clock_divider001(
     output reg clk_div
 );
     reg [19:0] out, next_out;
-    always @(posedge clk) begin
-        if(!rst_n)begin
+    always @(posedge clk or posedge rst_n) begin
+        if(rst_n==1'b1)begin
             out <= 0;
         end
         else begin
@@ -94,7 +94,7 @@ module clock_divider001(
         end
     end
     always@(*) begin
-        if(out == 20'd500000 && rst_n) begin
+        if(out == 20'd500000 && rst_n==1'b0) begin
             next_out = 0;
             clk_div = 1;
         end
@@ -111,16 +111,17 @@ module clock_divider1(
     output reg clk_div
 );
     reg [25:0] out, next_out;
-    always @(posedge clk) begin
-        if(!rst_n)begin
+    always @(posedge clk or posedge rst_n) begin
+        if(rst_n==1'b1)begin
             out <= 0;
+            clk_div <= 0;
         end
         else begin
             out <= next_out;
         end
     end
     always@(*) begin
-        if(out == 26'd50000000 && rst_n) begin
+        if(out == 26'd50000000 && rst_n==1'b0) begin
             next_out = 0;
             clk_div = 1;
         end
@@ -187,6 +188,7 @@ module lab4_1 (
             digits <=0;
         end else begin
             state <= next_state;
+            dir <= next_dir;
             led <= next_led;
             cnt_clk_1 <= next_cnt_clk_1;
             first <= next_first;
