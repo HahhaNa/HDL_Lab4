@@ -57,7 +57,7 @@ module clock_divider000001(
     input rst_n, 
     output reg clk_div
 );
-    reg [12:0] out, next_out;
+    reg [14:0] out, next_out;
     reg next_clk_div;
     always @(posedge clk or posedge rst_n) begin
         if(rst_n==1'b1)begin
@@ -70,7 +70,7 @@ module clock_divider000001(
         end
     end
     always@(*) begin
-        if(out == 13'd5000 && rst_n==1'b0) begin
+        if(out == 15'd10000 && rst_n==1'b0) begin
             next_out = 0;
             next_clk_div = (clk_div==1'b0)? 1'b1:1'b0;
         end
@@ -177,10 +177,9 @@ module lab4_1 (
     reg [3:0] value;
     reg [3:0] result[3:0];
     reg dir, next_dir;
-    reg finish = 0;
+    reg finish = 0, next_finish;
     reg [2:0] cnt_clk_1, next_cnt_clk_1;
     reg[9:0] next_led;
-    reg led_finish;
     
     parameter UP = 1'b0;
     parameter DOWN = 1'b1;
@@ -203,17 +202,28 @@ module lab4_1 (
             hundreds <= 4'd0;
             tens <= 4'd0;
             digits <= 4'd0;
+            finish <= 1'b0;
         end else begin
             led <= next_led;
             hundreds <= next_hundreds;
             tens <= next_tens;
             digits <= next_digits;
+            finish <= next_finish;
         end
     end
     always@(posedge clk_1, posedge rst) begin
-        if(rst==1'b1 || state==INITIAL || state==COUNTING)
+        if(rst==1'b1)
             cnt_clk_1 <= 3'd0;
         else cnt_clk_1 <= next_cnt_clk_1;
+    end
+
+    // next_cnt_clk
+    always@(*) begin
+        if(state==INITIAL || state==COUNTING)
+            next_cnt_clk_1 = 3'd0;
+        else if(cnt_clk_1 < 3'd5)
+            next_cnt_clk_1 = cnt_clk_1 + 3'd1;
+        else next_cnt_clk_1 = 3'd5;
     end
 
     // FSM state, dir combinational
@@ -225,7 +235,7 @@ module lab4_1 (
                 else begin
                     next_state = INITIAL;
                     if(direction_out == 1'b1)
-                        next_dir = (dir==0)? 1:0;
+                        next_dir = (dir==1'b0)? 1'b1:1'b0;
                 end
             end
             PREPARE: begin
@@ -235,10 +245,6 @@ module lab4_1 (
             COUNTING: begin
                 if(stop_out==1'b1 || finish==1'b1) begin
                     next_state = RESULT;
-                    result[3] = first;
-                    result[2] = hundreds;
-                    result[1] = tens;
-                    result[0] = digits;
                 end
                 else next_state = COUNTING;
             end
@@ -251,65 +257,113 @@ module lab4_1 (
 
     // digits, tens, hundreds, first control (next_...)
     always@(*) begin
-        case(state)
-        INITIAL: begin
-            if(dir==UP) begin
-                next_first = 4'd11;
-                next_hundreds = 4'd0;
-                next_tens = 4'd0;
-                next_digits = 4'd0;
-            end else if(dir==DOWN) begin
-                next_first = 4'd12;
-                next_hundreds = 4'd9;
-                next_tens = 4'd9;
-                next_digits = 4'd9;
+        case(state) 
+            INITIAL: begin
+                next_digits = 4'd13; // -
             end
-        end 
-        PREPARE: begin
-            next_first = 4'd10;
-            next_hundreds = hundreds;
-            next_tens = tens;
-            next_digits = digits;
-            finish = 0;
-        end
-        COUNTING: begin
-            if(dir==UP) begin
-                next_first = 4'd11;
-                if(digits==4'd9) begin
+            PREPARE: begin
+                next_digits = 4'd15; // empty
+            end
+            COUNTING: begin
+                if(hundreds == 4'd9 && tens == 4'd9 && digits == 4'd9 && dir == UP)
+                    next_digits = digits;
+                else if(hundreds == 4'd0 && tens == 4'd0 && digits == 4'd0 && dir == DOWN)
+                    next_digits = digits;
+                else if(digits == 4'd15 && dir == UP)
                     next_digits = 4'd0;
-                    if(tens==4'd9) begin
-                        next_tens = 4'd0;
-                        if(hundreds==4'd9) finish = 1;
-                        else next_hundreds = hundreds+1;
-                    end else next_tens = tens+1;
-                end else next_digits = digits+1;
-            end else if(dir==DOWN) begin
-                next_first = 4'd12;
-                if(digits==4'd0) begin
+                else if(digits == 4'd15 && dir == DOWN)
                     next_digits = 4'd9;
-                    if(tens==4'd0) begin
-                        next_tens = 4'd9;
-                        if(hundreds==4'd0) finish = 1;
-                        else next_hundreds = hundreds-1;
-                    end else next_tens = tens-1;
-                end else next_digits = digits-1;
+                else if(digits == 4'd9 && dir==UP)  next_digits = 4'd0;
+                else if(digits == 4'd0 && dir == DOWN) next_digits = 4'd9;
+                else if(dir == UP) next_digits = digits + 4'd1;
+                else next_digits = digits - 4'd1;
             end
-        end
-        RESULT: begin
-            next_digits = result[0];
-            next_tens = result[1];
-            next_hundreds = result[2];
-            next_first = result[3];
-        end
+            RESULT: begin
+                next_digits = digits;
+            end
+        endcase
+    end
+    always@(*) begin
+        case(state) 
+            INITIAL: begin
+                next_tens = 4'd13; // -
+            end
+            PREPARE: begin
+                next_tens = 4'd15; // empty
+            end
+            COUNTING: begin
+                if(hundreds == 4'd9 && tens == 4'd9 && digits == 4'd9 && dir == UP)
+                    next_tens = tens;
+                else if(hundreds == 4'd0 && tens == 4'd0 && digits == 4'd0 && dir == DOWN)
+                    next_tens = tens;
+                else if(tens == 4'd15 && dir == UP)
+                    next_tens = 4'd0;
+                else if(tens == 4'd15 && dir == DOWN)
+                    next_tens = 4'd9;
+                else if(hundreds != 4'd9 && tens == 4'd9 && dir == UP)  next_tens = 4'd0;
+                else if(hundreds != 4'd0 && tens == 4'd0 && dir == DOWN) next_tens = 4'd9;
+                else if(digits == 4'd9 && dir==UP)
+                    next_tens = tens + 4'd1;
+                else if(digits == 4'd0 && dir==DOWN)
+                    next_tens = tens - 4'd1;
+                else next_tens = tens;
+            end
+            RESULT: begin
+                next_tens = tens;
+            end
+        endcase
+    end
+    always@(*) begin
+        case(state) 
+            INITIAL: begin
+                next_hundreds = 4'd13; // -
+            end
+            PREPARE: begin
+                next_hundreds = 4'd15; // empty
+            end
+            COUNTING: begin
+                if(hundreds == 4'd15 && dir == UP)
+                    next_hundreds = 4'd0;
+                else if(hundreds == 4'd15 && dir == DOWN)
+                    next_hundreds = 4'd9;
+                else if(hundreds == 4'd9 && dir == UP)  next_hundreds = 4'd9;
+                else if(hundreds == 4'd0 && dir == DOWN) next_hundreds = 4'd0;
+                else if(tens == 4'd9 && dir==UP)
+                    next_hundreds = hundreds + 4'd1;
+                else if(tens == 4'd0 && dir==DOWN)
+                    next_hundreds = hundreds - 4'd1;
+                else next_hundreds = hundreds;
+            end
+            RESULT: begin
+                next_hundreds = hundreds;
+            end
+        endcase
+    end
+    always@(*) begin
+        case(state) 
+            INITIAL, COUNTING, RESULT: begin
+                if(dir==UP) next_first = 4'd11; // UP
+                else next_first = 4'd12; // DOWN
+            end
+            PREPARE: begin
+                next_first = 4'd10; // P
+            end
         endcase
     end
 
-    // next_cnt_clk
+    // the finish for counting
     always@(*) begin
-        if(cnt_clk_1 < 3'd5)
-            next_cnt_clk_1 = cnt_clk_1 + 3'd1;
-        else next_cnt_clk_1 = 3'd5;
+        if(state==COUNTING) begin
+            if(dir==UP && digits==4'd9 && tens==4'd9 && hundreds==4'd9)
+                next_finish = 1'b1;
+            else if(dir==DOWN && digits==4'd0 && tens==4'd0 && hundreds==4'd0)
+                next_finish = 1'b1;
+            else next_finish = 1'b0;
+        end else begin
+            next_finish = 1'b0;
+        end
     end
+
     // led output combinational (next_led)
     always@(*) begin
         case(state)
@@ -335,11 +389,14 @@ module lab4_1 (
             endcase
         end
         RESULT: begin
-            if(cnt_clk_1<5) begin
-                next_led = (cnt_clk_1%3'd2 != 0)? 10'b111_111_1111:10'd0;
-            end else begin
-                next_led = 10'b111_111_1111;
-            end
+            case(cnt_clk_1) 
+                4'd0: next_led = 10'b111_111_1111;
+                4'd1: next_led = 10'b000_000_0000;
+                4'd2: next_led = 10'b111_111_1111;
+                4'd3: next_led = 10'b000_000_0000;
+                4'd4: next_led = 10'b111_111_1111;
+                default: next_led = 10'b111_111_1111;
+            endcase
         end
         endcase
     end
@@ -348,27 +405,15 @@ module lab4_1 (
     always@(posedge clk_000001) begin
         case(DIGIT)
             4'b0111: begin
-                if(state==COUNTING || state==RESULT)
-                    value = digits;
-                else if(state==INITIAL)
-                    value = 4'd13;
-                else value = 4'd15; 
+                value = digits;
                 DIGIT = 4'b1110;
             end
             4'b1110: begin
-                if(state==COUNTING || state==RESULT)
-                    value = tens;
-                else if(state==INITIAL)
-                    value = 4'd13;
-                else value = 4'd15; 
+                value = tens;
                 DIGIT = 4'b1101;
             end
             4'b1101: begin
-                if(state==COUNTING || state==RESULT)
-                    value = hundreds;
-                else if(state==INITIAL)
-                    value = 4'd13;
-                else value = 4'd15; 
+                value = hundreds;
                 DIGIT = 4'b1011;
             end
             4'b1011: begin
