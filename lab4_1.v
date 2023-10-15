@@ -171,9 +171,8 @@ module lab4_1 (
     parameter RESULT = 2'b11;
 
     reg [1:0] state, next_state;
-    reg [9:0] counts;
-    reg [3:0] first, hundreds, tens, digits;
-    reg [3:0] next_first, next_hundreds, next_tens, next_digits;
+    reg [3:0] first, hundreds, tens, units;
+    reg [3:0] next_first, next_hundreds, next_tens, next_units;
     reg [3:0] value;
     reg [3:0] result[3:0];
     reg dir, next_dir;
@@ -201,13 +200,13 @@ module lab4_1 (
             led <= 10'b111_111_1111;
             hundreds <= 4'd0;
             tens <= 4'd0;
-            digits <= 4'd0;
+            units <= 4'd0;
             finish <= 1'b0;
         end else begin
             led <= next_led;
             hundreds <= next_hundreds;
             tens <= next_tens;
-            digits <= next_digits;
+            units <= next_units;
             finish <= next_finish;
         end
     end
@@ -255,31 +254,31 @@ module lab4_1 (
         endcase
     end
 
-    // digits, tens, hundreds, first control (next_...)
+    // units, tens, hundreds, first control (next_...)
     always@(*) begin
         case(state) 
             INITIAL: begin
-                next_digits = 4'd13; // -
+                next_units = 4'd13; // -
             end
             PREPARE: begin
-                next_digits = 4'd15; // empty
+                next_units = 4'd15; // empty
             end
             COUNTING: begin
-                if(hundreds == 4'd9 && tens == 4'd9 && digits == 4'd9 && dir == UP)
-                    next_digits = digits;
-                else if(hundreds == 4'd0 && tens == 4'd0 && digits == 4'd0 && dir == DOWN)
-                    next_digits = digits;
-                else if(digits == 4'd15 && dir == UP)
-                    next_digits = 4'd0;
-                else if(digits == 4'd15 && dir == DOWN)
-                    next_digits = 4'd9;
-                else if(digits == 4'd9 && dir==UP)  next_digits = 4'd0;
-                else if(digits == 4'd0 && dir == DOWN) next_digits = 4'd9;
-                else if(dir == UP) next_digits = digits + 4'd1;
-                else next_digits = digits - 4'd1;
+                if(hundreds == 4'd9 && tens == 4'd9 && units == 4'd9 && dir == UP)
+                    next_units = units;
+                else if(hundreds == 4'd0 && tens == 4'd0 && units == 4'd0 && dir == DOWN)
+                    next_units = units;
+                else if(units == 4'd15 && dir == UP)
+                    next_units = 4'd0;
+                else if(units == 4'd15 && dir == DOWN)
+                    next_units = 4'd9;
+                else if(units == 4'd9 && dir==UP)  next_units = 4'd0;
+                else if(units == 4'd0 && dir == DOWN) next_units = 4'd9;
+                else if(dir == UP) next_units = units + 4'd1;
+                else next_units = units - 4'd1;
             end
             RESULT: begin
-                next_digits = digits;
+                next_units = units;
             end
         endcase
     end
@@ -292,9 +291,9 @@ module lab4_1 (
                 next_tens = 4'd15; // empty
             end
             COUNTING: begin
-                if(hundreds == 4'd9 && tens == 4'd9 && digits == 4'd9 && dir == UP)
+                if(hundreds == 4'd9 && tens == 4'd9 && units == 4'd9 && dir == UP)
                     next_tens = tens;
-                else if(hundreds == 4'd0 && tens == 4'd0 && digits == 4'd0 && dir == DOWN)
+                else if(hundreds == 4'd0 && tens == 4'd0 && units == 4'd0 && dir == DOWN)
                     next_tens = tens;
                 else if(tens == 4'd15 && dir == UP)
                     next_tens = 4'd0;
@@ -302,9 +301,9 @@ module lab4_1 (
                     next_tens = 4'd9;
                 else if(hundreds != 4'd9 && tens == 4'd9 && dir == UP)  next_tens = 4'd0;
                 else if(hundreds != 4'd0 && tens == 4'd0 && dir == DOWN) next_tens = 4'd9;
-                else if(digits == 4'd9 && dir==UP)
+                else if(units == 4'd9 && dir==UP)
                     next_tens = tens + 4'd1;
-                else if(digits == 4'd0 && dir==DOWN)
+                else if(units == 4'd0 && dir==DOWN)
                     next_tens = tens - 4'd1;
                 else next_tens = tens;
             end
@@ -354,9 +353,9 @@ module lab4_1 (
     // the finish for counting
     always@(*) begin
         if(state==COUNTING) begin
-            if(dir==UP && digits==4'd9 && tens==4'd9 && hundreds==4'd9)
+            if(dir==UP && units==4'd9 && tens==4'd9 && hundreds==4'd9)
                 next_finish = 1'b1;
-            else if(dir==DOWN && digits==4'd0 && tens==4'd0 && hundreds==4'd0)
+            else if(dir==DOWN && units==4'd0 && tens==4'd0 && hundreds==4'd0)
                 next_finish = 1'b1;
             else next_finish = 1'b0;
         end else begin
@@ -405,7 +404,7 @@ module lab4_1 (
     always@(posedge clk_000001) begin
         case(DIGIT)
             4'b0111: begin
-                value = digits;
+                value = units;
                 DIGIT = 4'b1110;
             end
             4'b1110: begin
