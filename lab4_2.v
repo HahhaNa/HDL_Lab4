@@ -36,23 +36,16 @@ endmodule
 
 module clock_divider000001(
     input clk, 
-    input rst_n, 
     output reg clk_div
 );
     reg [14:0] out, next_out;
     reg next_clk_div;
-    always @(posedge clk or posedge rst_n) begin
-        if(rst_n==1'b1)begin
-            out <= 0;
-            clk_div <= 1'b0;
-        end
-        else begin
-            out <= next_out;
-            clk_div <= next_clk_div;
-        end
+    always @(posedge clk) begin 
+        out <= next_out;
+        clk_div <= next_clk_div;
     end
     always@(*) begin
-        if(out == 15'd10000 && rst_n==1'b0) begin
+        if(out == 15'd10000) begin
             next_out = 0;
             next_clk_div = (clk_div==1'b0)? 1'b1:1'b0;
         end
@@ -65,23 +58,16 @@ endmodule
 
 module clock_divider001(
     input clk, 
-    input rst_n, 
     output reg clk_div
 );
     reg [19:0] out, next_out;
     reg next_clk_div;
-    always @(posedge clk or posedge rst_n) begin
-        if(rst_n==1'b1)begin
-            out <= 0;
-            clk_div <= 1'b0;
-        end
-        else begin
-            out <= next_out;
-            clk_div <= next_clk_div;
-        end
+    always @(posedge clk) begin
+        out <= next_out;
+        clk_div <= next_clk_div;
     end
     always@(*) begin
-        if(out == 20'd500000 && rst_n==1'b0) begin
+        if(out == 20'd500000) begin
             next_out = 0;
             next_clk_div = (clk_div==1'b0)? 1'b1:1'b0;
         end
@@ -94,23 +80,16 @@ endmodule
 
 module clock_divider1(
     input clk, 
-    input rst_n, 
     output reg clk_div
 );
     reg [25:0] out, next_out;
     reg next_clk_div;
-    always @(posedge clk or posedge rst_n) begin
-        if(rst_n==1'b1)begin
-            out <= 0;
-            clk_div <= 1'b0;
-        end
-        else begin
-            out <= next_out;
-            clk_div <= next_clk_div;
-        end
+    always @(posedge clk) begin
+        out <= next_out;
+        clk_div <= next_clk_div;
     end
     always@(*) begin
-        if(out == 26'd50000000 && rst_n==1'b0) begin
+        if(out == 26'd50000000) begin
             next_out = 0;
             next_clk_div = (clk_div==1'b0)? 1'b1:1'b0;
         end
@@ -139,9 +118,9 @@ module lab4_2 (
 
     // clk
     wire clk_001, clk_1, clk_000001;
-    clock_divider000001 clk1(.clk(clk), .clk_div(clk_000001), .rst_n(rst));
-    clock_divider001 clk2(.clk(clk), .clk_div(clk_001), .rst_n(rst));
-    clock_divider1 clk3(.clk(clk), .clk_div(clk_1), .rst_n(rst));
+    clock_divider000001 clk1(.clk(clk), .clk_div(clk_000001));
+    clock_divider001 clk2(.clk(clk), .clk_div(clk_001));
+    clock_divider1 clk3(.clk(clk), .clk_div(clk_1));
 
     // button signal
     wire stop_pb, start_pb, direction_pb, increase_pb, decrease_pb;
@@ -170,37 +149,46 @@ module lab4_2 (
 
     reg [1:0] state, next_state;
     reg [9:0] initail_num, end_num;
-    reg [3:0] first, hundreds, tens, units;
-    reg [3:0] next_first, next_hundreds, next_tens, next_units;
+    reg [9:0] D0, D1, D2; // 3 2 1 0
+    reg [9:0] next_D0, next_D1, next_D2;
+    reg [9:0] first, hundreds, tens, units;
+    reg [9:0] next_first, next_hundreds, next_tens, next_units;
     reg [3:0] value;
     reg [3:0] result[3:0];
     reg [3:0] dir, next_dir;
     reg [2:0] cnt_clk_1, next_cnt_clk_1;
     reg [2:0] cnt_clk_2, next_cnt_clk_2;
-    reg[9:0] next_led;
+    reg [15:0] next_led;
     reg finish = 0, next_finish;
     reg enter = 1'b1;
 
     always@(posedge clk_000001, posedge rst) begin
         if(rst==1'b1) begin
+            led <= 16'b1111_1111_1111_1111;
             state <= INITIAL;
             dir <= UP;
             first <= UP;
+            D0 <= 4'd0;
+            D1 <= 4'd0;
+            D2 <= 4'd0;
         end else begin
+            led <= next_led;
             state <= next_state;
             dir <= next_dir;
             first <= next_first;
+            D0 <= next_D0;
+            D1 <= next_D1;
+            D2 <= next_D2;
         end
     end
     always@(posedge clk_001, posedge rst) begin
-        if(rst==1'b1) begin
-            led <= 10'b111_111_1111;
+        if(rst==1'b1) begin        
             hundreds <= 4'd0;
             tens <= 4'd0;
             units <= 4'd0;
-            finish <= 1'b0;
+            finish <= 1'b0;   
         end else begin
-            led <= next_led;
+            
             hundreds <= next_hundreds;
             tens <= next_tens;
             units <= next_units;
@@ -241,7 +229,7 @@ module lab4_2 (
             INITIAL: begin
                 if(start_out==1'b1) next_state = COUNTING;
                 else begin
-                    initail_num = units + tens*10'd10 + hundreds*10'd100;
+                    initail_num = D0 + D1*10'd10 + D2*10'd100;
                     next_state = INITIAL;
                     if(direction_out == 1'b1)
                         next_dir = (dir==UP)? DOWN:UP;
@@ -252,9 +240,9 @@ module lab4_2 (
                     next_state = FAIL;
                 end else if(stop_out==1'b1) begin
                     end_num = units + tens*10'd10 + hundreds*10'd100;
-                    if(dir==UP && end_num-initail_num <= 10'd100)
+                    if(end_num>=initail_num && end_num-initail_num <= 10'd100)
                         next_state = SUCCESS;
-                    else if(dir==DOWN && initail_num-end_num <= 10'd100)
+                    else if(end_num<initail_num && initail_num-end_num <= 10'd100)
                         next_state = SUCCESS;
                     else next_state = FAIL;
                 end else begin
@@ -273,17 +261,19 @@ module lab4_2 (
     end
 
     // units, tens, hundreds, first control (next_...)
+    // + D0, D1, D2, D3
     always@(*) begin
         case(state) 
             INITIAL: begin
                 if(Digit_1==1'b1 && increase_out==1'b1) 
-                    next_units = (units==4'd9)? 4'd0:units+4'd1;
+                    next_D0 = (D0==4'd9)? 4'd0:D0+4'd1;
                 else if(Digit_1==1'b1 && decrease_out==1'b1) 
-                    next_units = (units==4'd0)? 4'd9:units-4'd1;
+                    next_D0 = (D0==4'd0)? 4'd9:D0-4'd1;
                 else if(enter == 1'b1) begin 
-                    next_units = units;
+                    next_D0 = D0;
                 end
-                else next_units = next_units;
+                else next_D0 = next_D0;
+                next_units = (dir==UP)? 4'd0:4'd9;
             end
             COUNTING: begin
                 if(hundreds == 4'd9 && tens == 4'd9 && units == 4'd9 && dir == UP)
@@ -295,10 +285,7 @@ module lab4_2 (
                 else if(dir == UP) next_units = units + 4'd1;
                 else next_units = units - 4'd1;
             end
-            FAIL: begin
-                next_units = units;
-            end
-            SUCCESS: begin
+            FAIL, SUCCESS: begin
                 next_units = units;
             end
         endcase
@@ -307,13 +294,14 @@ module lab4_2 (
         case(state) 
             INITIAL: begin
                 if(Digit_2==1'b1 && increase_out==1'b1) 
-                    next_tens = (tens==4'd9)? 4'd0:tens+4'd1;
+                    next_D1 = (D1==4'd9)? 4'd0:D1+4'd1;
                 else if(Digit_2==1'b1 && decrease_out==1'b1) 
-                    next_tens = (tens==4'd0)? 4'd9:tens-4'd1;
+                    next_D1 = (D1==4'd0)? 4'd9:D1-4'd1;
                 else if(enter == 1'b1) begin 
-                    next_tens = tens;
+                    next_D1 = D1;
                 end
-                else next_tens = next_tens;
+                else next_D1 = next_D1;
+                next_tens = (dir==UP)? 4'd0:4'd9;
             end
             COUNTING: begin
                 if(hundreds == 4'd9 && tens == 4'd9 && units == 4'd9 && dir == UP)
@@ -328,10 +316,7 @@ module lab4_2 (
                     next_tens = tens - 4'd1;
                 else next_tens = tens;
             end
-            FAIL: begin
-                next_tens = tens;
-            end
-            SUCCESS: begin
+            FAIL, SUCCESS: begin
                 next_tens = tens;
             end
         endcase
@@ -340,14 +325,14 @@ module lab4_2 (
         case(state) 
             INITIAL: begin
                 if(Digit_3==1'b1 && increase_out==1'b1) 
-                    next_hundreds = (hundreds==4'd9)? 4'd0:hundreds+4'd1;
+                    next_D2 = (D2==4'd9)? 4'd0:D2+4'd1;
                 else if(Digit_3==1'b1 && decrease_out==1'b1) 
-                    next_hundreds = (hundreds==4'd0)? 4'd9:hundreds-4'd1;
+                    next_D2 = (D2==4'd0)? 4'd9:D2-4'd1;
                 else if(enter == 1'b1) begin 
-                    next_hundreds = hundreds;
-                    enter = 1'b0;
+                    next_D2 = D2;
                 end
-                else next_hundreds = next_hundreds;
+                else next_D2 = next_D2;
+                next_hundreds = (dir==UP)? 4'd0:4'd9;
             end
             COUNTING: begin
                 enter = 1'b1;
@@ -359,10 +344,7 @@ module lab4_2 (
                     next_hundreds = hundreds - 4'd1;
                 else next_hundreds = hundreds;
             end
-            FAIL: begin
-                next_hundreds = hundreds;
-            end
-            SUCCESS: begin
+            FAIL, SUCCESS: begin
                 next_hundreds = hundreds;
             end
         endcase
@@ -399,32 +381,31 @@ module lab4_2 (
     always@(*) begin
         case(state)
         INITIAL: begin
-            next_led = 10'b111_111_1111;
+            next_led = 16'b1111_1111_1111_1111;
         end 
         COUNTING: begin
             case(cnt_clk_1) 
-                4'd0, 4'd1, 4'd2: next_led = 10'b111_111_1111;
-                default: next_led = 10'b000_000_0000;
+                4'd0, 4'd1, 4'd2: next_led = 16'b1111_1111_1111_1111;
+                default: next_led = 16'b0000_0000_0000_0000;
             endcase
         end
         FAIL: begin
             case(cnt_clk_2) 
-                4'd0: next_led = 10'b111_111_1111;
-                4'd1: next_led = 10'b000_000_0000;
-                4'd2: next_led = 10'b111_111_1111;
-                4'd3: next_led = 10'b000_000_0000;
-                4'd4: next_led = 10'b111_111_1111;
-                default: next_led = 10'b000_000_0000;
+                4'd0: next_led = 16'b1111_1111_1111_1111;
+                4'd1: next_led = 16'b0000_0000_0000_0000;
+                4'd2: next_led = 16'b1111_1111_1111_1111;
+                4'd3: next_led = 16'b0000_0000_0000_0000;
+                4'd4: next_led = 16'b1111_1111_1111_1111;
+                default: next_led = 16'b0000_0000_0000_0000;
             endcase
         end
         SUCCESS: begin
             case(cnt_clk_2) 
-                4'd0: next_led = 10'b111_111_1111;
-                4'd1: next_led = 10'b000_000_0000;
-                4'd2: next_led = 10'b111_111_1111;
-                4'd3: next_led = 10'b000_000_0000;
-                4'd4: next_led = 10'b111_111_1111;
-                default: next_led = 10'b000_000_0000;
+                4'd0: next_led = 16'b1111_1111_1111_1111;
+                4'd1: next_led = 16'b0000_0000_0000_0000;
+                4'd2: next_led = 16'b1111_1111_1111_1111;
+                4'd3: next_led = 16'b0000_0000_0000_0000;
+                default: next_led = 16'b1111_1111_1111_1111;
             endcase
         end
         endcase
@@ -435,16 +416,19 @@ module lab4_2 (
         case(DIGIT)
             4'b0111: begin
                 if(state==COUNTING && cnt_clk_1>=3) value = DASH;
+                else if(state==INITIAL) value = D0;
                 else value = units;
                 DIGIT = 4'b1110;
             end
             4'b1110: begin
                 if(state==COUNTING && cnt_clk_1>=3) value = DASH;
+                else if(state==INITIAL) value = D1;
                 else value = tens;
                 DIGIT = 4'b1101;
             end
             4'b1101: begin
                 if(state==COUNTING && cnt_clk_1>=3) value = DASH;
+                else if(state==INITIAL) value = D2;
                 else value = hundreds;
                 DIGIT = 4'b1011;
             end
