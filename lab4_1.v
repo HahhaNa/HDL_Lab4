@@ -54,23 +54,16 @@ endmodule
 
 module clock_divider000001(
     input clk, 
-    input rst_n, 
     output reg clk_div
 );
     reg [14:0] out, next_out;
     reg next_clk_div;
-    always @(posedge clk or posedge rst_n) begin
-        if(rst_n==1'b1)begin
-            out <= 0;
-            clk_div <= 1'b0;
-        end
-        else begin
-            out <= next_out;
-            clk_div <= next_clk_div;
-        end
+    always @(posedge clk) begin 
+        out <= next_out;
+        clk_div <= next_clk_div;
     end
     always@(*) begin
-        if(out == 15'd10000 && rst_n==1'b0) begin
+        if(out == 15'd10000) begin
             next_out = 0;
             next_clk_div = (clk_div==1'b0)? 1'b1:1'b0;
         end
@@ -83,23 +76,16 @@ endmodule
 
 module clock_divider001(
     input clk, 
-    input rst_n, 
     output reg clk_div
 );
     reg [19:0] out, next_out;
     reg next_clk_div;
-    always @(posedge clk or posedge rst_n) begin
-        if(rst_n==1'b1)begin
-            out <= 0;
-            clk_div <= 1'b0;
-        end
-        else begin
-            out <= next_out;
-            clk_div <= next_clk_div;
-        end
+    always @(posedge clk) begin
+        out <= next_out;
+        clk_div <= next_clk_div;
     end
     always@(*) begin
-        if(out == 20'd500000 && rst_n==1'b0) begin
+        if(out == 20'd500000) begin
             next_out = 0;
             next_clk_div = (clk_div==1'b0)? 1'b1:1'b0;
         end
@@ -112,23 +98,16 @@ endmodule
 
 module clock_divider1(
     input clk, 
-    input rst_n, 
     output reg clk_div
 );
     reg [25:0] out, next_out;
     reg next_clk_div;
-    always @(posedge clk or posedge rst_n) begin
-        if(rst_n==1'b1)begin
-            out <= 0;
-            clk_div <= 1'b0;
-        end
-        else begin
-            out <= next_out;
-            clk_div <= next_clk_div;
-        end
+    always @(posedge clk) begin
+        out <= next_out;
+        clk_div <= next_clk_div;
     end
     always@(*) begin
-        if(out == 26'd50000000 && rst_n==1'b0) begin
+        if(out == 26'd50000000) begin
             next_out = 0;
             next_clk_div = (clk_div==1'b0)? 1'b1:1'b0;
         end
@@ -151,9 +130,9 @@ module lab4_1 (
 ); 
     // clk
     wire clk_001, clk_1, clk_000001;
-    clock_divider000001 clk1(.clk(clk), .clk_div(clk_000001), .rst_n(rst));
-    clock_divider001 clk2(.clk(clk), .clk_div(clk_001), .rst_n(rst));
-    clock_divider1 clk3(.clk(clk), .clk_div(clk_1), .rst_n(rst));
+    clock_divider000001 clk1(.clk(clk), .clk_div(clk_000001));
+    clock_divider001 clk2(.clk(clk), .clk_div(clk_001));
+    clock_divider1 clk3(.clk(clk), .clk_div(clk_1));
 
     // button signal
     wire stop_pb, start_pb, direction_pb;
