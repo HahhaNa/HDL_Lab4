@@ -149,59 +149,74 @@ module lab4_1 (
     parameter COUNTING = 2'b10;
     parameter RESULT = 2'b11;
 
+    parameter P = 4'd10;
+    parameter UP = 4'd11;
+    parameter DOWN = 4'd12;
+    parameter DASH = 4'd13;
+
     reg [1:0] state, next_state;
     reg [3:0] first, hundreds, tens, units;
     reg [3:0] next_first, next_hundreds, next_tens, next_units;
     reg [3:0] value;
     reg [3:0] result[3:0];
-    reg dir, next_dir;
+    reg [3:0] dir, next_dir;
     reg finish = 0, next_finish;
     reg [2:0] cnt_clk_1, next_cnt_clk_1;
+    reg [2:0] cnt_clk_2, next_cnt_clk_2;
     reg[9:0] next_led;
-    
-    parameter UP = 1'b0;
-    parameter DOWN = 1'b1;
 
     // sequential assign with reset
     always@(posedge clk_000001, posedge rst) begin
         if(rst==1'b1) begin
             state <= INITIAL;
-            dir <= 0;
-            first <= 4'd0;
-        end else begin
-            state <= next_state;
-            dir <= next_dir;
-            first <= next_first;
-        end
-    end
-    always@(posedge clk_001, posedge rst) begin
-        if(rst==1'b1) begin
             led <= 10'b111_111_1111;
-            hundreds <= 4'd0;
-            tens <= 4'd0;
-            units <= 4'd0;
+            dir <= UP;
+            first <= 4'd11;
             finish <= 1'b0;
         end else begin
+            state <= next_state;
             led <= next_led;
-            hundreds <= next_hundreds;
-            tens <= next_tens;
-            units <= next_units;
+            dir <= next_dir;
+            first <= next_first;
             finish <= next_finish;
         end
     end
+    always@(posedge clk_001, posedge rst) begin
+        if(rst==1'b1) begin     
+            hundreds <= DASH;
+            tens <= DASH;
+            units <= DASH;     
+        end else begin       
+            hundreds <= next_hundreds;
+            tens <= next_tens;
+            units <= next_units;       
+        end
+    end
     always@(posedge clk_1, posedge rst) begin
-        if(rst==1'b1)
+        if(rst==1'b1) begin
             cnt_clk_1 <= 3'd0;
-        else cnt_clk_1 <= next_cnt_clk_1;
+            cnt_clk_2 <= 3'd0;
+        end
+        else begin
+            cnt_clk_1 <= next_cnt_clk_1;
+            cnt_clk_2 <= next_cnt_clk_2;
+        end
     end
 
     // next_cnt_clk
     always@(*) begin
-        if(state==INITIAL || state==COUNTING)
+        if(state==INITIAL || state==COUNTING || state==RESULT)
             next_cnt_clk_1 = 3'd0;
-        else if(cnt_clk_1 < 3'd5)
+        else if(cnt_clk_1 < 3'd3)
             next_cnt_clk_1 = cnt_clk_1 + 3'd1;
-        else next_cnt_clk_1 = 3'd5;
+        else next_cnt_clk_1 = 3'd3;
+    end
+    always@(*) begin
+        if(state==INITIAL || state==COUNTING || state==PREPARE)
+            next_cnt_clk_2 = 3'd0;
+        else if(cnt_clk_2 < 3'd5)
+            next_cnt_clk_2 = cnt_clk_2 + 3'd1;
+        else next_cnt_clk_2 = 3'd5;
     end
 
     // FSM state, dir combinational
@@ -213,7 +228,7 @@ module lab4_1 (
                 else begin
                     next_state = INITIAL;
                     if(direction_out == 1'b1)
-                        next_dir = (dir==1'b0)? 1'b1:1'b0;
+                        next_dir = (dir==UP)? DOWN:UP;
                 end
             end
             PREPARE: begin
@@ -237,7 +252,7 @@ module lab4_1 (
     always@(*) begin
         case(state) 
             INITIAL: begin
-                next_units = 4'd13; // -
+                next_units = DASH; // -
             end
             PREPARE: begin
                 next_units = 4'd15; // empty
@@ -264,7 +279,7 @@ module lab4_1 (
     always@(*) begin
         case(state) 
             INITIAL: begin
-                next_tens = 4'd13; // -
+                next_tens = DASH; // -
             end
             PREPARE: begin
                 next_tens = 4'd15; // empty
@@ -294,7 +309,7 @@ module lab4_1 (
     always@(*) begin
         case(state) 
             INITIAL: begin
-                next_hundreds = 4'd13; // -
+                next_hundreds = DASH; // -
             end
             PREPARE: begin
                 next_hundreds = 4'd15; // empty
@@ -324,7 +339,7 @@ module lab4_1 (
                 else next_first = 4'd12; // DOWN
             end
             PREPARE: begin
-                next_first = 4'd10; // P
+                next_first = P; // P
             end
         endcase
     end
@@ -367,7 +382,7 @@ module lab4_1 (
             endcase
         end
         RESULT: begin
-            case(cnt_clk_1) 
+            case(cnt_clk_2) 
                 4'd0: next_led = 10'b111_111_1111;
                 4'd1: next_led = 10'b000_000_0000;
                 4'd2: next_led = 10'b111_111_1111;
@@ -418,10 +433,10 @@ module lab4_1 (
             4'd7: DISPLAY = 7'b111_1000;
             4'd8: DISPLAY = 7'b000_0000;
             4'd9: DISPLAY = 7'b001_0000;
-            4'd10: DISPLAY = 7'b000_1100; // P
-            4'd11: DISPLAY = 7'b101_1100; // UP
-            4'd12: DISPLAY = 7'b110_0011; // DOWN
-            4'd13: DISPLAY = 7'b011_1111; // -
+            P: DISPLAY = 7'b000_1100; // P
+            UP: DISPLAY = 7'b101_1100; // UP
+            DOWN: DISPLAY = 7'b110_0011; // DOWN
+            DASH: DISPLAY = 7'b011_1111; // -
             default: DISPLAY = 7'b111_1111;
         endcase
     end

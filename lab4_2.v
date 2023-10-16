@@ -171,6 +171,7 @@ module lab4_2 (
             D0 <= 4'd0;
             D1 <= 4'd0;
             D2 <= 4'd0;
+            finish <= 1'b0;   
         end else begin
             led <= next_led;
             state <= next_state;
@@ -179,20 +180,18 @@ module lab4_2 (
             D0 <= next_D0;
             D1 <= next_D1;
             D2 <= next_D2;
+            finish <= next_finish;
         end
     end
     always@(posedge clk_001, posedge rst) begin
         if(rst==1'b1) begin        
             hundreds <= 4'd0;
             tens <= 4'd0;
-            units <= 4'd0;
-            finish <= 1'b0;   
+            units <= 4'd0;        
         end else begin
-            
             hundreds <= next_hundreds;
             tens <= next_tens;
-            units <= next_units;
-            finish <= next_finish;
+            units <= next_units; 
         end
     end
     always@(posedge clk_1, posedge rst) begin
