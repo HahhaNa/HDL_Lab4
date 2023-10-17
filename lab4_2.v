@@ -34,7 +34,7 @@ module one_pulse (
 	end
 endmodule
 
-module clock_divider000001(
+module clock_divider(
     input clk, 
     output reg clk_div
 );
@@ -117,24 +117,24 @@ module lab4_2 (
 ); 
 
     // clk
-    wire clk_001, clk_1, clk_000001;
-    clock_divider000001 clk1(.clk(clk), .clk_div(clk_000001));
+    wire clk_001, clk_1, clk_div;
+    clock_divider clk1(.clk(clk), .clk_div(clk_div));
     clock_divider001 clk2(.clk(clk), .clk_div(clk_001));
     clock_divider1 clk3(.clk(clk), .clk_div(clk_1));
 
     // button signal
     wire stop_pb, start_pb, direction_pb, increase_pb, decrease_pb;
     wire stop_out, start_out, direction_out, increase_out, decrease_out;
-    debounce d1(.clk(clk_000001), .pb(stop), .pb_debounced(stop_pb));
-    one_pulse o1(.clk(clk_000001), .pb_in(stop_pb), .pb_out(stop_out));
-    debounce d2(.clk(clk_000001), .pb(start), .pb_debounced(start_pb));
-    one_pulse o2(.clk(clk_000001), .pb_in(start_pb), .pb_out(start_out));
-    debounce d3(.clk(clk_000001), .pb(direction), .pb_debounced(direction_pb));
-    one_pulse o3(.clk(clk_000001), .pb_in(direction_pb), .pb_out(direction_out));
-    debounce d4(.clk(clk_000001), .pb(increase), .pb_debounced(increase_pb));
-    one_pulse o4(.clk(clk_000001), .pb_in(increase_pb), .pb_out(increase_out));
-    debounce d5(.clk(clk_000001), .pb(decrease), .pb_debounced(decrease_pb));
-    one_pulse o5(.clk(clk_000001), .pb_in(decrease_pb), .pb_out(decrease_out));
+    debounce d1(.clk(clk_div), .pb(stop), .pb_debounced(stop_pb));
+    one_pulse o1(.clk(clk_div), .pb_in(stop_pb), .pb_out(stop_out));
+    debounce d2(.clk(clk_div), .pb(start), .pb_debounced(start_pb));
+    one_pulse o2(.clk(clk_div), .pb_in(start_pb), .pb_out(start_out));
+    debounce d3(.clk(clk_div), .pb(direction), .pb_debounced(direction_pb));
+    one_pulse o3(.clk(clk_div), .pb_in(direction_pb), .pb_out(direction_out));
+    debounce d4(.clk(clk_div), .pb(increase), .pb_debounced(increase_pb));
+    one_pulse o4(.clk(clk_div), .pb_in(increase_pb), .pb_out(increase_out));
+    debounce d5(.clk(clk_div), .pb(decrease), .pb_debounced(decrease_pb));
+    one_pulse o5(.clk(clk_div), .pb_in(decrease_pb), .pb_out(decrease_out));
     // parameter for state
     parameter INITIAL = 2'd0;
     parameter COUNTING = 2'd1;
@@ -162,7 +162,8 @@ module lab4_2 (
     reg finish = 0, next_finish;
     reg enter = 1'b1;
 
-    always@(posedge clk_000001, posedge rst) begin
+    // sequential assign with reset
+    always@(posedge clk_div, posedge rst) begin
         if(rst==1'b1) begin
             led <= 16'b1111_1111_1111_1111;
             state <= INITIAL;
@@ -411,7 +412,7 @@ module lab4_2 (
     end
 
      // 7-segment output (value, DIGIT)
-    always@(posedge clk_000001) begin
+    always@(posedge clk_div) begin
         case(DIGIT)
             4'b0111: begin
                 if(state==COUNTING && cnt_clk_1>=3) value = DASH;
