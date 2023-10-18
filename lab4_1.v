@@ -174,26 +174,28 @@ module lab4_1 (
             units <= next_units;       
         end
     end
-    always@(posedge clk_div, posedge rst) begin
-        if(rst==1'b1) begin
+    always@(posedge clk_1, posedge rst) begin
+        if(rst==1'b1 || state==INITIAL || state==COUNTING) begin
             cnt_clk_1 <= 3'd0;
             cnt_clk_2 <= 3'd0;
-        end
-        else begin
+        end else if(state==PREPARE) begin
             cnt_clk_1 <= next_cnt_clk_1;
+            cnt_clk_2 <= 3'd0;
+        end else begin
+            cnt_clk_1 <= 3'd0;
             cnt_clk_2 <= next_cnt_clk_2;
         end
     end
 
     // next_cnt_clk
-    always@(posedge clk_1) begin
+    always@(*) begin
         if(state==INITIAL || state==COUNTING || state==RESULT)
             next_cnt_clk_1 = 3'd0;
         else if(cnt_clk_1 < 3'd3)
             next_cnt_clk_1 = cnt_clk_1 + 3'd1;
         else next_cnt_clk_1 = 3'd3;
     end
-    always@(posedge clk_1) begin
+    always@(*) begin
         if(state==INITIAL || state==COUNTING || state==PREPARE)
             next_cnt_clk_2 = 3'd0;
         else if(cnt_clk_2 < 3'd5)
